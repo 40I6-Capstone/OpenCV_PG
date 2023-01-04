@@ -59,7 +59,7 @@ cv2.createTrackbar('Canny Upper', 'Trackbars', 0, 255, nothing)
 
 while True:
     # _, frame = cap.read()
-    frame = cv2.imread("square.jpg")
+    frame = cv2.imread("round.jpg")
     frame_high_contrast = apply_brightness_contrast(frame, 0, 20)
     hsv = cv2.cvtColor(frame_high_contrast, cv2.COLOR_BGR2HSV)
     hsv_high_contrast = apply_brightness_contrast(hsv,0,10)
@@ -95,10 +95,20 @@ while True:
         x, y, w, h = cv2.boundingRect(c)
 
         # red color in BGR
-        color = (0, 0, 255)
+        red = (0, 0, 255)
+        blue = (255, 0, 0)
 
-        # draw the biggest contour (c) in red
-        cv2.rectangle(img_copy, (x, y), (x + w, y + h), color , 15)
+        # draw the bounding rectangle for the biggest contour (c) in red
+        cv2.rectangle(img_copy, (x, y), (x + w, y + h), red , 15)
+
+        # Find the index of the largest contour
+        areas = [cv2.contourArea(c) for c in contours]
+        max_index = np.argmax(areas)
+        cnt = contours[max_index]
+
+        # # draw the largest contour in blue
+        cv2.drawContours(img_copy,contours,max_index,blue,15)
+
     except:
         print("no contour found")
 
