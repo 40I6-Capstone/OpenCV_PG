@@ -19,6 +19,7 @@ if testing:
     cv2.namedWindow('Edge', cv2.WINDOW_NORMAL)
     # cv2.namedWindow('High Contrast', cv2.WINDOW_NORMAL)
 
+
 # try increasing contrast and/or inverting colors to help bounding - don't see much of a difference
 # use contours method to select largest shape from mask result - increase lieniency
 # don't blur the image to take care of the high spots
@@ -27,7 +28,7 @@ if testing:
 
 # another potential idea is to make the whole image either black or white based on how close the pixel is to that colour then select the shape from there
 
-def apply_brightness_contrast(input_img, brightness=0, contrast=0): #function to change brightness and contrast in the image
+def apply_brightness_contrast(input_img, brightness=0, contrast=0):  # function to change brightness and contrast in the image
     if brightness != 0:
         if brightness > 0:
             shadow = brightness
@@ -55,6 +56,7 @@ def apply_brightness_contrast(input_img, brightness=0, contrast=0): #function to
 def nothing(x):
     pass
 
+
 # create trackbars to edit HSV lower and upper values for the mask
 # also create trackbars to play with canny upper and lower thresholds
 cv2.createTrackbar("L - H", "Trackbars", 0, 179, nothing)
@@ -76,7 +78,8 @@ while True:
     # max = [180,255,255]
 
     # Get Lower and Upper HSV+Canny values from the trackbars
-    l_h = cv2.getTrackbarPos("L - H", "Trackbars")
+    # l_h = cv2.getTrackbarPos("L - H", "Trackbars")
+    l_h = 30
     l_s = cv2.getTrackbarPos("L - S", "Trackbars")
     l_v = cv2.getTrackbarPos("L - V", "Trackbars")
     u_h = cv2.getTrackbarPos("U - H", "Trackbars")
@@ -90,7 +93,7 @@ while True:
 
     # Mask is applied to hsv of orignal image, using values selected on the trackbar
     mask = cv2.inRange(hsv, lower, upper)
-    invert_mask = cv2.bitwise_not(mask) # inverted version of the mask
+    invert_mask = cv2.bitwise_not(mask)  # inverted version of the mask
 
     # mask result (selecting only the oil spill from the original image)
     result = cv2.bitwise_and(frame, frame, mask=invert_mask)
@@ -107,14 +110,16 @@ while True:
     try:
         # find the biggest countour (c) by the area
         c = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(c)
+        x, y, w, h = cv2.boundingRect(c)  # (x,y) is the top-left coordinate of the rectangle and (w,h) is its width and height.
 
         # red color in BGR
         red = (0, 0, 255)
         blue = (255, 0, 0)
+        green = (0, 0, 255)
+        orange = (0, 123, 255)
 
         # draw the bounding rectangle for the biggest contour (c) in red
-        cv2.rectangle(img_copy, (x, y), (x + w, y + h), red , 15)
+        cv2.rectangle(img_copy, (x, y), (x + w, y + h), red, 15)
 
         # Find the index of the largest contour
         areas = [cv2.contourArea(c) for c in contours]
@@ -122,11 +127,22 @@ while True:
         cnt = contours[max_index]
 
         # # draw the largest contour in blue
-        cv2.drawContours(img_copy,contours,max_index,blue,15)
+        cv2.drawContours(img_copy, contours, max_index, blue, 15)
 
-    except: # Prevents code from crashing when upper and lower limits are all set to 0 (i.e. trackbars not modified)
+        # add a buffer to the bounding box
+        largest_side = max(w, h)
+        buffer = 1.1
+        largest_side = largest_side * buffer
+
+        # Draw a circle around the spill based on the buffer bounding box. We must round to get a whole number of pixels otherwise drawing the circle will not work
+        center = (round(x + w / 2), round(y + h / 2))
+        radius = round(largest_side / 2)
+        color = orange
+        thickness = 15
+        cv2.circle(img_copy, center, radius, color, thickness)
+
+    except:  # Prevents code from crashing when upper and lower limits are all set to 0 (i.e. trackbars not modified)
         print("no contour found")
-
 
     # draw the contours on a copy of the original image
     cv2.drawContours(img_copy, contours, -1, (0, 255, 0), 3)
@@ -140,10 +156,9 @@ while True:
         cv2.imshow("mask_result", result)
         cv2.imshow('Edge', edge)
 
-    #wait for a key to pressed, if not then close
+    # wait for a key to pressed, if not then close
     key = cv2.waitKey(1)
     if key == 27:
         break
-
 
 cv2.destroyAllWindows()
