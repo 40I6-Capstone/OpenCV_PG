@@ -4,16 +4,21 @@
 
 import cv2
 import numpy as np
+import math
 
-# Set Testing to True to see image pipeline
-global testing
-testing = False
+global debug
+debug = False
+
+# Set Pipeline to True to see image pipeline
+global Pipeline
+Pipeline = False
+
 
 cv2.namedWindow("Trackbars", cv2.WINDOW_NORMAL)
 cv2.namedWindow('Original Image', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Contour', cv2.WINDOW_NORMAL)
 
-if testing:
+if Pipeline:
     cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
     cv2.namedWindow('mask_result', cv2.WINDOW_NORMAL)
     cv2.namedWindow('Edge', cv2.WINDOW_NORMAL)
@@ -56,6 +61,20 @@ def apply_brightness_contrast(input_img, brightness=0, contrast=0):  # function 
 def nothing(x):
     pass
 
+# From: https://gis.stackexchange.com/questions/394955/generating-approximate-polygon-for-circle-with-given-radius-and-centre-without
+# This function gets just one pair of coordinates based on the angle theta
+def get_circle_coord(theta, x_center, y_center, radius):
+    x = radius * math.cos(theta) + x_center
+    y = radius * math.sin(theta) + y_center
+    return (x, y)
+
+
+# This function gets all the pairs of coordinates
+def get_all_circle_coords(x_center, y_center, radius, n_points):
+    thetas = [i / n_points * math.tau for i in range(n_points)] # math.tau = 2 * math.pi
+    circle_coords = [get_circle_coord(theta, x_center, y_center, radius) for theta in thetas]
+    return circle_coords
+
 
 # create trackbars to edit HSV lower and upper values for the mask
 # also create trackbars to play with canny upper and lower thresholds
@@ -78,8 +97,11 @@ while True:
     # max = [180,255,255]
 
     # Get Lower and Upper HSV+Canny values from the trackbars
-    # l_h = cv2.getTrackbarPos("L - H", "Trackbars")
-    l_h = 30
+    if debug:
+        l_h = 30
+    else:
+        l_h = cv2.getTrackbarPos("L - H", "Trackbars")
+
     l_s = cv2.getTrackbarPos("L - S", "Trackbars")
     l_v = cv2.getTrackbarPos("L - V", "Trackbars")
     u_h = cv2.getTrackbarPos("U - H", "Trackbars")
@@ -140,6 +162,10 @@ while True:
         color = orange
         thickness = 15
         cv2.circle(img_copy, center, radius, color, thickness)
+        circle_coords = get_all_circle_coords(x_center=round(x + w / 2),
+                                              y_center=round(y + h / 2),
+                                              radius=radius,
+                                              n_points=15)
 
     except:  # Prevents code from crashing when upper and lower limits are all set to 0 (i.e. trackbars not modified)
         print("no contour found")
@@ -150,7 +176,7 @@ while True:
     # Display
     cv2.imshow("Original Image", frame)
     cv2.imshow("Contour", img_copy)
-    if testing:
+    if Pipeline:
         cv2.imshow("High Contrast", frame_high_contrast)
         cv2.imshow("mask", mask)
         cv2.imshow("mask_result", result)
