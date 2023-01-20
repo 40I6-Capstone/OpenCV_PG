@@ -1,36 +1,17 @@
-#  Author: Julian Morrone, morronej@mcmaster.ca
-#  This code uses the Python OpenCV library to isolate an oil spill from the surrounding water via photos that will be passed in
-#  It then draws a bounding box around the spill, adds a buffer and creates a discretized circle around it that can be followed by the UGV's to place Bouy's and contain the spill
-
 import cv2
 import numpy as np
 import math
 
 global debug
-debug = True
+debug = False
 
 # Set Pipeline to True to see image pipeline
 global Pipeline
-Pipeline = False
-
-cv2.namedWindow("Trackbars", cv2.WINDOW_NORMAL)
-cv2.namedWindow('Original Image', cv2.WINDOW_NORMAL)
-cv2.namedWindow('Contour', cv2.WINDOW_NORMAL)
-
-if Pipeline:
-    cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('mask_result', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('Edge', cv2.WINDOW_NORMAL)
-    # cv2.namedWindow('High Contrast', cv2.WINDOW_NORMAL)
+Pipeline = True
 
 
-# try increasing contrast and/or inverting colors to help bounding - don't see much of a difference
-# use contours method to select largest shape from mask result - increase lieniency
-# don't blur the image to take care of the high spots
-# also worth trying: as part of setup, take easier images with better lighting
-# do the contour and edge on the mask, not the mask result - can use blur on the mask as well
-
-# another potential idea is to make the whole image either black or white based on how close the pixel is to that colour then select the shape from there
+def nothing(x):
+    pass
 
 def apply_brightness_contrast(input_img, brightness=0, contrast=0):  # function to change brightness and contrast in the image
     if brightness != 0:
@@ -57,24 +38,14 @@ def apply_brightness_contrast(input_img, brightness=0, contrast=0):  # function 
     return buf
 
 
-def nothing(x):
-    pass
-
-
-# takes four arguments: the x and y coordinates of the center of the circle, the radius of the circle, and the side length. The function uses the math module to calculate the x and y coordinates of each vertex of the polygon,
-# and appends these coordinates to a list called points. The function then returns this list of points.
-# effectively, this returns the center point for each oil boom in a list.
-#TODO - How will we ensure the UGV places the boom at the appropriate angle?
-def circle_discretize(center_x, center_y, radius, side_len):
-    num_sides = math.ceil(math.pi / (math.atan(side_len / (2 * radius))))  # formula derived on onenote
-    points = []
-    for i in range(num_sides):
-        angle = 2 * math.pi * i / num_sides
-        x = center_x + radius * math.cos(angle)
-        y = center_y + radius * math.sin(angle)
-        points.append((x, y))
-    return points
-
+cv2.namedWindow("Trackbars", cv2.WINDOW_NORMAL)
+cv2.namedWindow('Original Image', cv2.WINDOW_NORMAL)
+cv2.namedWindow('Contour', cv2.WINDOW_NORMAL)
+cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
+cv2.namedWindow('mask_result', cv2.WINDOW_NORMAL)
+cv2.namedWindow('Edge', cv2.WINDOW_NORMAL)
+cv2.namedWindow('High Contrast', cv2.WINDOW_NORMAL)
+cv2.namedWindow('Sharpened', cv2.WINDOW_NORMAL)
 
 # create trackbars to edit HSV lower and upper values for the mask
 # also create trackbars to play with canny upper and lower thresholds
@@ -89,8 +60,15 @@ cv2.createTrackbar('Canny Upper', 'Trackbars', 0, 255, nothing)
 
 while True:
     # _, frame = cap.read()
-    frame = cv2.imread("round.jpg")
-    frame_high_contrast = apply_brightness_contrast(frame, 0, 20)
+    frame = cv2.imread("Tello_test_images/40.png")
+
+
+    kernel = np.array([[0, -1, 0],
+                       [-1, 5, -1],
+                       [0, -1, 0]])
+    image_sharp = cv2.filter2D(src=frame, ddepth=-1, kernel=kernel)
+
+    frame_high_contrast = apply_brightness_contrast(image_sharp, 0, 50)
     hsv = cv2.cvtColor(frame_high_contrast, cv2.COLOR_BGR2HSV)
 
     # min = [0,0,0]
@@ -139,7 +117,6 @@ while True:
         blue = (255, 0, 0)
         green = (0, 0, 255)
         orange = (0, 123, 255)
-        pink = (165, 0, 255)
 
         # draw the bounding rectangle for the biggest contour (c) in red
         cv2.rectangle(img_copy, (x, y), (x + w, y + h), red, 15)
@@ -151,32 +128,6 @@ while True:
 
         # # draw the largest contour in blue
         cv2.drawContours(img_copy, contours, max_index, blue, 15)
-
-        # add a buffer to the bounding box
-        largest_side = max(w, h)
-        buffer = 1.1
-        largest_side = largest_side * buffer
-
-        # Draw a circle around the spill based on the buffer bounding box. We must round to get a whole number of pixels otherwise drawing the circle will not work
-        center = (round(x + w / 2), round(y + h / 2))
-        radius = round(largest_side / 2)
-        color = orange
-        thickness = 15
-        cv2.circle(img_copy, center, radius, color, thickness)
-
-        circle_coords = circle_discretize(center_x=round(x + w / 2), center_y=round(y + h / 2), radius=radius, side_len=200)
-        # circle_coords = get_all_circle_coords(x_center=round(x + w / 2),
-        #                                       y_center=round(y + h / 2),
-        #                                       radius=radius,
-        #                                       n_points=15)
-
-        # np.rint(some_floats)).astype(int)
-        # rounded_circle_coords = list(np.around(np.array(circle_coords), 0))
-        int_circle_coords = list(np.rint(np.array(circle_coords)).astype(int))
-
-        for i in range(len(int_circle_coords)):
-            cv2.circle(img_copy, (int_circle_coords[i][0], int_circle_coords[i][1]), radius=15, color=pink, thickness=-1)
-
 
     except:  # Prevents code from crashing when upper and lower limits are all set to 0 (i.e. trackbars not modified)
         print("no contour found")
@@ -192,6 +143,7 @@ while True:
         cv2.imshow("mask", mask)
         cv2.imshow("mask_result", result)
         cv2.imshow('Edge', edge)
+        cv2.imshow('Sharpened',image_sharp)
 
     # wait for a key to pressed, if not then close
     key = cv2.waitKey(1)
