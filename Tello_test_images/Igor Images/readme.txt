@@ -1,0 +1,1 @@
+Measurements: mat 61.2 cm across, 85.5 cm leg to leg, 129.1 cm ground to camera

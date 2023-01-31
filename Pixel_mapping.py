@@ -60,7 +60,7 @@ cv2.createTrackbar('Canny Upper', 'Trackbars', 0, 255, nothing)
 
 while True:
     # _, frame = cap.read()
-    frame = cv2.imread("Tello_test_images/40.png")
+    frame = cv2.imread("Tello_test_images/20_newbg.png")
 
 
     kernel = np.array([[0, -1, 0],
@@ -69,7 +69,7 @@ while True:
     image_sharp = cv2.filter2D(src=frame, ddepth=-1, kernel=kernel)
 
     frame_high_contrast = apply_brightness_contrast(image_sharp, 0, 50)
-    hsv = cv2.cvtColor(frame_high_contrast, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # min = [0,0,0]
     # max = [180,255,255]

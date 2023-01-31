@@ -89,7 +89,7 @@ cv2.createTrackbar('Canny Upper', 'Trackbars', 0, 255, nothing)
 
 while True:
     # _, frame = cap.read()
-    frame = cv2.imread("round.jpg")
+    frame = cv2.imread("Tello_test_images/20_newbg.png")
     frame_high_contrast = apply_brightness_contrast(frame, 0, 20)
     hsv = cv2.cvtColor(frame_high_contrast, cv2.COLOR_BGR2HSV)
 
@@ -164,18 +164,27 @@ while True:
         thickness = 15
         cv2.circle(img_copy, center, radius, color, thickness)
 
+        # calculate the midpoints of each boom when placed in the discretized circle
+        # TODO - modify side length in this function once we know the true length of the booms we will be using
         circle_coords = circle_discretize(center_x=round(x + w / 2), center_y=round(y + h / 2), radius=radius, side_len=200)
         # circle_coords = get_all_circle_coords(x_center=round(x + w / 2),
         #                                       y_center=round(y + h / 2),
         #                                       radius=radius,
         #                                       n_points=15)
 
-        # np.rint(some_floats)).astype(int)
-        # rounded_circle_coords = list(np.around(np.array(circle_coords), 0))
+        # Convert the coordinates to integers so that they can actually be displayed on the image
         int_circle_coords = list(np.rint(np.array(circle_coords)).astype(int))
 
+        origin = [round(x + w / 2), round(y + h / 2)]
+        unit_normal = []
+        # Draw all the points on the image &
+        # Calculate a vector between all the points and the origin of the bounding circle and normalize them
         for i in range(len(int_circle_coords)):
             cv2.circle(img_copy, (int_circle_coords[i][0], int_circle_coords[i][1]), radius=15, color=pink, thickness=-1)
+            point = (int_circle_coords[i][0], int_circle_coords[i][1]) # each midpoint on the discretized circle
+            vector = np.subtract(origin, point)  # To find the directional vector, subtract the coordinates of the initial point from the coordinates of the terminal point.
+            unit_normal.append(vector / np.linalg.norm(vector))
+
 
 
     except:  # Prevents code from crashing when upper and lower limits are all set to 0 (i.e. trackbars not modified)
